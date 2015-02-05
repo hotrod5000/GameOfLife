@@ -1,0 +1,168 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+    		.hider{
+ 			  visibility:hidden;
+			}
+    </style>
+</head>
+<body bgcolor="grey">
+<label>rows<input id="rows" type="number" value="16"></label>
+<label>cols<input id="cols" type="number" value="32"></label>
+<button onclick="clicked(this)">Generate</button>
+<div id="container" hidden>
+<table id="tbl" border="solid">
+
+</table>
+<button >Prev</button>
+<button onclick="nextButtonClicked(this)">Next</button>
+<button onclick="go()">Go</button>
+<button onclick="stop()">Stop</button>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script>
+var states = [];
+var runFlag = true;
+function render(arr){
+	$("#container").hide();
+	$("#tbl").empty()
+	
+	var tbl = $("#tbl");
+	for(var row=0; row<arr.length;row++){
+		var r = "<tr>"
+		for(var col=0; col<arr[row].length;col++){
+			var hidden = arr[row][col] ? "" : "class='hider'";
+			r += "<td><div id='" + row + "-" + col + "' " + hidden + ">" + "X" +"</div></td>";
+		}
+		r += "</tr>";
+		tbl.append(r);
+	}
+	$("#container").show();
+}
+function go(){
+	runFlag = true;
+	setTimeout(function () {
+        var next = nextGen(states[states.length - 1]);
+		states.push(next);
+		render(next);
+		if(runFlag){
+			go();	
+		}
+    }, 200);
+
+	
+}
+function stop(){
+        
+	runFlag = false;
+}
+function clicked(){
+	var rows = +$("#rows").val();
+	var cols = +$("#cols").val();
+
+	var seeded = seed(rows, cols);
+	states.push(seeded);
+	render(seeded);
+}
+function nextButtonClicked(){
+	var next = nextGen(states[states.length - 1]);
+	states.push(next);
+	render(next);
+
+}
+
+function seed(rows,cols){
+	var arr = [];
+	for(var i=0;i<rows;i++){
+		arr[i] = [];
+		for(var j=0;j<cols;j++){
+			//roll for a percent chance that we will set this cell to true
+			var roll = Math.random();
+			if(roll > 0.1){
+				arr[i][j] = false;
+			}
+			else{
+				arr[i][j] = true;	
+			}
+		}
+	}
+	return arr;
+}
+function countNeighbors(arr, row, col){
+	var ret = 0;
+	//each cell has 8 neighbors, cells that live on edge of matrix "wrap" around
+	var neighborCells = getNeighborCells(arr, row, col);
+	for(var i=0; i < neighborCells.length; i++){
+		ret += arr[neighborCells[i].x][neighborCells[i].y];
+	}
+	return ret;
+
+}
+function nextCol(arr, col){
+	return col + 1 > arr[0].length-1 ? 0 : col + 1;
+}
+function prevCol(arr, col){
+	return col - 1 >= 0 ? col - 1 : arr[0].length - 1;
+}
+function nextRow(arr, row){
+	return row + 1 > arr.length-1 ? 0 : row + 1;
+}
+function prevRow(arr, row){
+	return row - 1 >= 0 ? row - 1 : arr.length - 1;
+}
+function getNeighborCells(arr, row, col){
+	var ret = [];
+	//find all 8 neighboring cells.  start at top left and go around clockwise
+	//1: subtract one from column, one from row
+	ret.push({x:prevRow(arr, row), y:prevCol(arr, col)});
+	//2: subtract one from row, stay in same column
+	ret.push({x:prevRow(arr, row), y:col});
+	//3: subtract one from row, add one to col
+	ret.push({x:prevRow(arr, row), y:nextCol(arr, col)});
+	//4: add one to column, stay in same row
+	ret.push({x:row, y:nextCol(arr, col)});
+	//5: add one to column, one to row
+	ret.push({x:nextRow(arr, row), y:nextCol(arr, col)});
+	//6: add one to row, stay in same col
+	ret.push({x:nextRow(arr, row), y:col});
+	//7: subtract one from col, add one to row
+	ret.push({x:nextRow(arr, row), y:prevCol(arr, col)});
+	//8: subtract one from col, stay in same row
+	ret.push({x:row, y:prevCol(arr, col)});
+	return ret;
+
+}
+/*	Any live cell with fewer than two live neighbours dies, as if caused by under-population.
+	Any live cell with two or three live neighbours lives on to the next generation.
+	Any live cell with more than three live neighbours dies, as if by overcrowding.
+	Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.*/
+
+function nextGen(gen){
+	//make copy
+	var newArray = gen.map(function(arr) {
+	    return arr.slice();
+	});
+	for(var row = 0; row < gen.length; row++){
+		for(var col=0; col < gen[row].length; col++){
+			var numNeighbors = countNeighbors(gen, row, col);
+			if(newArray[row][col]){ //cell is alive
+				if(numNeighbors < 2 || numNeighbors > 3){
+					newArray[row][col] = false;
+				}
+			}
+			else{ //cell is dead
+				if(numNeighbors == 3){
+					newArray[row][col] = true;	
+				}
+			}
+		}
+	}
+	return newArray;
+
+}
+</script>
+</body>
+</html>
